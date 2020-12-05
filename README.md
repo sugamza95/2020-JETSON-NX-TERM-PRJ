@@ -2,6 +2,7 @@ This may not be run in your environment other than our teammates.
 
 1. https://github.com/NVIDIA-AI-IOT/trt_pose 
 Follow the example int the website above and copy all directories and files in tasks folder to tensorRT-yolo/tensorrt_demos
+(in your case run test.py)
 
 2. run this command in tensorrt_demos 
 ``` shell 
@@ -32,7 +33,8 @@ $ cp yolo_with_plugins.py ../../
 
 5-1(optional). copy resnet18_baseline_att_224x224_A_epoch_249.py, resnet18_baseline_att_224x224_A_epoch_249_trt.py to tensorrt_demos 
 ```shell 
-$ cd .. cp resnet18_baseline_att_224x224_A_epoch_249.py .. 
+$ cd .. 
+$ cp resnet18_baseline_att_224x224_A_epoch_249.py .. 
 $ cp resnet18_baseline_att_224x224_A_epoch_249_trt.py .. 
 ```
 
