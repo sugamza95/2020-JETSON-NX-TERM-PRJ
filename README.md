@@ -43,9 +43,8 @@ ex) https://github.com/sugamza95/2020-JETSON-NX-TERM-PRJ/blob/376693640596d09cf6
 
 7.run this command 
 ``` shell 
-$ python3 trt_yolo_with_centernet.py --video <video file 1280x720> -m yolov4-tiny-416 
+$ python3 trt_yolo_with_centernet.py --video <video file> -m yolov4-tiny-416 
 ``` 
-!!!CAUTION use 1280x720 video
 
 If you want to use your custom weights, cfg files refer to this github https://github.com/jkjung-avt/tensorrt_demos
 
