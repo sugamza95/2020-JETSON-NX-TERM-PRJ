@@ -126,12 +126,12 @@ std = torch.Tensor([0.229, 0.224, 0.225]).cuda()
 device = torch.device('cuda')
 
 #detection box
-BOX_1_WIDTH_START = 250
+BOX_1_WIDTH_START = 200
 BOX_1_WIDTH_END = 400
 BOX_1_HEIGHT_START = 300
 BOX_1_HEIGHT_END = 450
 
-BOX_2_WIDTH_START = 650
+BOX_2_WIDTH_START = 600
 BOX_2_WIDTH_END = 800
 BOX_2_HEIGHT_START = 300
 BOX_2_HEIGHT_END = 450
@@ -200,20 +200,20 @@ def execute(cam, img, src, people_num,id_position,box_class):
                         cv2.circle(src, (x1,y1), 3, color, 2)
                         print("wrist", x1, y1)
                         #I guess 9, 10 is wrist
-            elif len(box_class) == 1: #if one person ---> assign left wrist or right wrist
+            elif (len(box_class) == 1): #if one person ---> assign left wrist or right wrist
                 if(keypoints_agg[j][9][1] is not None):
                     x1 = round(keypoints_agg[j][9][2]*cam.img_width)
                     y1 = round(keypoints_agg[j][9][1]*cam.img_height)
                     id_position.append([x,x1,y1]) #[hip position, wrist position]
                     cv2.circle(src, (x1,y1), 3, color, 2)
-                    print("wrist", x1, y1)
+                    print("wrist alone", x1, y1)
                 elif(keypoints_agg[j][10][1] is not None):
                     x1 = round(keypoints_agg[j][10][2]*cam.img_width)
                     y1 = round(keypoints_agg[j][10][1]*cam.img_height)
                     id_position.append([x,x1,y1]) #[hip position, wrist position]
                      #id_position list contains lists of axis of hip position, wrist position of one person
                     cv2.circle(src, (x1,y1), 3, color, 2)
-                    print("wrist", x1, y1)
+                    print("wrist alone", x1, y1)
 
     
     #added part
@@ -320,37 +320,53 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
         img_e = cv2.resize(img, dsize=(WIDTH, HEIGHT), interpolation=cv2.INTER_AREA)
         people_num,id_position,time_for_disinfection  = execute(cam, img_e, img, people_num,id_position,std_box_class)
         if no_mask_count == 0:
-          if len(std_box_class) < 3:
+          if len(std_box_class) < 3: 
+# in execute function time list updates for the number of box_class
+# so when object detected more than 3, count_t[index] commend occur error
             if(len(time_for_disinfection) != 0): #time_For_disinfection contains decision about detecting or not
-                 for index, el in enumerate(time_for_disinfection):
-                     if(el == 1): #if time_for_disinfection is 1(touched)
-                        count_t[index]+=1 #The element of the index of person who touched disinfection plus '1' 
-                     elif(el == 0):
-                        count_t[index] = 0
-                     else: # in case time_for_disinfection is '2'(not detect keypoints), count_t does not increase
-                        count_t[index] = count_t[index]
+                if (len(time_for_disinfection) == 1) and (std_box_class[0][0] > (cam.img_width/2)):
+# in case, left side person appears while right person use disinfection
+#right person's count_t value move to the left side person 
+                  for index, el in enumerate(time_for_disinfection):
+                       if(el == 1): #if time_for_disinfection is 1(touched)
+                          count_t[index + 1]+=1  
+                       elif(el == 0):
+                          count_t[index + 1] = 0
+                       else: 
+                          count_t[index + 1] = count_t[index + 1]
+#because id_position sorted
+                else:
+                  for index, el in enumerate(time_for_disinfection):
+                       if(el == 1): #if time_for_disinfection is 1(touched)
+                          count_t[index]+=1 #The element of the index of person who touched disinfection plus '1' 
+                       elif(el == 0):
+                          count_t[index] = 0
+                       else: # in case time_for_disinfection is '2'(not detect keypoints), count_t does not increase
+                          count_t[index] = count_t[index]
 
             for index, el in enumerate(count_t):
                 if(el >= 10): # When el variable increase enough, flag[index] set.
                      flag[index] = 1
 
             print("time_count", count_t);
-      
+            cv2.putText(img, "\n" + str(count_t[0]) + str(count_t[1]) + "\n", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
             for index, el in enumerate(flag):
                 if(len(std_box_class) != 0):
-#for unkown reason "puttext... you are not allowed to enter ... does not work
                      if(el != 0): #this 'el' is not previous 'el' varialbe
-                         cv2.putText(img, "You are allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+                         if (len(time_for_disinfection) == 1) and (std_box_class[0][0] > (cam.img_width/2)):
+                            cv2.putText(img, "You are allowed to enter", (std_box_class[0][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+                         else:
+                            cv2.putText(img, "You are allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
                      #if((id_position[index][1] <= 10) or (id_position[index][1] >= 1270)):
                 #    el = 0
                   #    count_t[index] = 0
-                    # else:
-                     #    cv2.putText(img, "You are not allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+                     #else:
+                         #cv2.putText(img, "You are not allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
 
             font = cv2.FONT_HERSHEY_PLAIN
             line = cv2.LINE_AA
         else:
-            cv2.putText(img, "Put on Mask!", (30, 30),  cv2.FONT_HERSHEY_SIMPLEX, 2.0,(0, 255, 0), 2, cv2.LINE_AA)
+            cv2.putText(img, "Put on Mask!", (30, 30),  cv2.FONT_HERSHEY_SIMPLEX, 1.0,(0, 255, 0), 2, cv2.LINE_AA)
         #in case someone does not put on the mask
 
         if len(boxes) == 0 : # in case no one is detected
