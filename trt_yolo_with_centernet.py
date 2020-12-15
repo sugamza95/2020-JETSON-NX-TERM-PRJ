@@ -336,14 +336,15 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
             print("time_count", count_t);
       
             for index, el in enumerate(flag):
-                if(len(std_box_class) == 2):
+                if(len(std_box_class) != 0):
+#for unkown reason "puttext... you are not allowed to enter ... does not work
                      if(el != 0): #this 'el' is not previous 'el' varialbe
                          cv2.putText(img, "You are allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
                      #if((id_position[index][1] <= 10) or (id_position[index][1] >= 1270)):
                 #    el = 0
                   #    count_t[index] = 0
-                     else:
-                         cv2.putText(img, "You are not allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+                    # else:
+                     #    cv2.putText(img, "You are not allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
 
             font = cv2.FONT_HERSHEY_PLAIN
             line = cv2.LINE_AA
