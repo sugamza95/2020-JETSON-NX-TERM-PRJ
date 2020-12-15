@@ -88,15 +88,15 @@ num_links = len(human_pose['skeleton'])
 print("pass ")
 
 print('------ model = resnet--------')
-MODEL_WEIGHTS = '/home/ee201511281/trt_pose/tasks/human_pose/resnet18_baseline_att_224x224_A_epoch_249.pth'
-OPTIMIZED_MODEL = '/home/ee201511281/trt_pose/tasks/human_pose/resnet18_baseline_att_224x224_A_epoch_249_trt.pth'
+MODEL_WEIGHTS = '/home/ee201511400/for_term/ee201511281/tensorRT-yolo/tensorrt_demos/resnet18_baseline_att_224x224_A_epoch_249.pth'
+OPTIMIZED_MODEL = '/home/ee201511400/for_term/ee201511281/tensorRT-yolo/tensorrt_demos/resnet18_baseline_att_224x224_A_epoch_249_trt.pth'
 model = trt_pose.models.resnet18_baseline_att(num_parts, 2 * num_links).cuda().eval()
 WIDTH = 224
 HEIGHT = 224
 '''
 print('------ model = densenet--------')
-MODEL_WEIGHTS = '/home/ee201511281/trt_pose/tasks/human_pose/densenet121_baseline_att_256x256_B_epoch_160.pth'
-OPTIMIZED_MODEL = '/home/ee201511281/trt_pose/tasks/human_pose/densenet121_baseline_att_256x256_B_epoch_160_trt.pth'
+MODEL_WEIGHTS = '/home/ee201511400/for_term/ee201511281/tensorRT-yolo/tensorrt_demos/densenet121_baseline_att_256x256_B_epoch_160.pth'
+OPTIMIZED_MODEL = '/home/ee201511400/for_term/ee201511281/tensorRT-yolo/tensorrt_demos/densenet121_baseline_att_256x256_B_epoch_160_trt.pth'
 model = trt_pose.models.densenet121_baseline_att(num_parts, 2 * num_links).cuda().eval()
 WIDTH = 256
 HEIGHT = 256
@@ -125,17 +125,16 @@ mean = torch.Tensor([0.485, 0.456, 0.406]).cuda()
 std = torch.Tensor([0.229, 0.224, 0.225]).cuda()
 device = torch.device('cuda')
 
-#detection box
-BOX_1_WIDTH_START = 200
+
+BOX_1_WIDTH_START = 250
 BOX_1_WIDTH_END = 400
 BOX_1_HEIGHT_START = 300
 BOX_1_HEIGHT_END = 450
 
-BOX_2_WIDTH_START = 600
+BOX_2_WIDTH_START = 650
 BOX_2_WIDTH_END = 800
 BOX_2_HEIGHT_START = 300
 BOX_2_HEIGHT_END = 450
-
     
 def preprocess(image):
     global device
@@ -146,10 +145,10 @@ def preprocess(image):
     image.sub_(mean[:, None, None]).div_(std[:, None, None])
     return image[None, ...]
 print("pass4")
-def execute(cam, img, src, people_num,id_position,box_class):
+def execute(img, src, people_num,id_position,box_class,cam):
     color = (0, 255, 0)
     id_position=[]
-    time = []
+    time = [2,2]
     data = preprocess(img)
     cmap, paf = model_trt(data)
     cmap, paf = cmap.detach().cpu(), paf.detach().cpu()
@@ -159,87 +158,101 @@ def execute(cam, img, src, people_num,id_position,box_class):
     #added part
     people_num_tmp = people_num
     keypoints_agg=[]
-    for i in range(counts[0]): #repeat collecting keypoints axis for the number of people
+    for i in range(counts[0]):
         
         print('{0}\n'.format(len(range(counts[0]))))
         keypoints, human_flag, people_num_tmp = get_keypoint(objects, i, peaks, people_num_tmp)
         print("#of people", people_num_tmp)
         if(human_flag == 1):
-            keypoints_agg.append(keypoints) #keypoints_agg lists contains all parts of people on screen
+            keypoints_agg.append(keypoints)
       # print("keypoints, nose",keypoints[11])
    #     if(human_partm == 1):
     #        if(keypoints[0]):
      #           print("keypoint:", keypoints[0])
     #keypoints_agg.sort(key=lambda x:x[11][1])
-    for j in range(len(keypoints_agg)): 
-#draw only wrist keypoints
-        if(keypoints_agg[j][11][1] is not None): # right hip
-            id=j
+    if(len(keypoints_agg) == 1):
+        #if(keypoints_agg[0][11][1] is not None):
+           # x = round(keypoints_agg[0][11][2]*cam.img_width)
+           # y = round(keypoints_agg[0][11][1]*cam.img_height)
+        if(len(box_class) != 0):
+            if(abs(box_class[0][0]-BOX_1_WIDTH_START) < abs(box_class[0][0]-BOX_2_WIDTH_START)):
+                if(keypoints_agg[0][10][1] is not None):
+                    x1 = round(keypoints_agg[0][10][2]*cam.img_width)
+                    y1 = round(keypoints_agg[0][10][1]*cam.img_height)
+                    id_position = [[box_class[0][0],x1,y1],0]
+                    cv2.circle(src, (x1,y1), 3, color, 2)
+                elif(keypoints_agg[0][9][1] is not None):
+                    x1 = round(keypoints_agg[0][9][2]*cam.img_width)
+                    y1 = round(keypoints_agg[0][9][1]*cam.img_height)
+                    id_position = [[box_class[0][0],x1,y1],0]
+                    cv2.circle(src, (x1,y1), 3, color, 2)
+                box_class=[box_class[0],[0,0]]
+
+            else:
+                if(keypoints_agg[0][9][1] is not None):
+                    x1 = round(keypoints_agg[0][9][2]*cam.img_width)
+                    y1 = round(keypoints_agg[0][9][1]*cam.img_height)
+                    id_position = [0,[box_class[0][0],x1,y1]]
+                    cv2.circle(src, (x1,y1), 3, color, 2)
+                elif(keypoints_agg[0][10][1] is not None):
+                    x1 = round(keypoints_agg[0][10][2]*cam.img_width)
+                    y1 = round(keypoints_agg[0][10][1]*cam.img_height)
+                    id_position = [0,[box_class[0][0],x1,y1]]
+                    cv2.circle(src, (x1,y1), 3, color, 2)
+                box_class=[[0,0], box_class[0]]
+
+    elif(len(keypoints_agg) == 2):
+     for j in range(len(keypoints_agg)):
+        if(keypoints_agg[j][11][1] is not None):# right hip
             x = round(keypoints_agg[j][11][2]*cam.img_width)
             y = round(keypoints_agg[j][11][1]*cam.img_height)
-            #if(i == people_num_tmp)                         
-          #  id_position[id] = x
             cv2.circle(src, (x, y), 3, color, 2)
             #left wrist ? right wrist ? 
             #right
-            if(len(box_class) == 2): 
-                if(abs(box_class[0][0]-x) < abs(box_class[1][0]-x)):
-                    if(keypoints_agg[j][10][1] is not None):
-                        x1 = round(keypoints_agg[j][10][2]*cam.img_width)
-                        y1 = round(keypoints_agg[j][10][1]*cam.img_height)
-                        id_position.append([x,x1,y1]) #[hip position, wrist position]
-                        #id_position list contains lists of axis of hip position, wrist position of one person
-                        cv2.circle(src, (x1,y1), 3, color, 2)
-                        print("wrist", x1, y1)
-                   #left
-                elif(abs(box_class[0][0]-x) > abs(box_class[1][0]-x)):
-                    if(keypoints_agg[j][9][1] is not None):
-                        x1 = round(keypoints_agg[j][9][2]*cam.img_width)
-                        y1 = round(keypoints_agg[j][9][1]*cam.img_height)
-                        id_position.append([x,x1,y1]) #[hip position, wrist position]
-                        cv2.circle(src, (x1,y1), 3, color, 2)
-                        print("wrist", x1, y1)
-                        #I guess 9, 10 is wrist
-            elif (len(box_class) == 1): #if one person ---> assign left wrist or right wrist
+            if(len(box_class) == 2):
+             if(abs(box_class[0][0]-x) < abs(box_class[1][0]-x)):
+                if(keypoints_agg[j][10][1] is not None):
+                 x1 = round(keypoints_agg[j][10][2]*cam.img_width)
+                 y1 = round(keypoints_agg[j][10][1]*cam.img_height)
+                 id_position.append([x,x1,y1,'left']) #[hip position, wrist position]
+                 cv2.circle(src, (x1,y1), 3, color, 2)
+                 print("wrist", x1, y1)
+            #left
+             elif(abs(box_class[0][0]-x) > abs(box_class[1][0]-x)):
                 if(keypoints_agg[j][9][1] is not None):
-                    x1 = round(keypoints_agg[j][9][2]*cam.img_width)
-                    y1 = round(keypoints_agg[j][9][1]*cam.img_height)
-                    id_position.append([x,x1,y1]) #[hip position, wrist position]
-                    cv2.circle(src, (x1,y1), 3, color, 2)
-                    print("wrist alone", x1, y1)
-                elif(keypoints_agg[j][10][1] is not None):
-                    x1 = round(keypoints_agg[j][10][2]*cam.img_width)
-                    y1 = round(keypoints_agg[j][10][1]*cam.img_height)
-                    id_position.append([x,x1,y1]) #[hip position, wrist position]
-                     #id_position list contains lists of axis of hip position, wrist position of one person
-                    cv2.circle(src, (x1,y1), 3, color, 2)
-                    print("wrist alone", x1, y1)
+                 x1 = round(keypoints_agg[j][9][2]*cam.img_width)
+                 y1 = round(keypoints_agg[j][9][1]*cam.img_height)
+                 id_position.append([x,x1,y1,'right']) #[hip position, wrist position]
+                 cv2.circle(src, (x1,y1), 3, color, 2)
+                 print("wrist", x1, y1)
+    
 
-    
     #added part
-    
     #sort as x coordinate ascending
-    id_position = sorted(id_position, key=itemgetter(0))
+    if 0 not in id_position:
+        id_position = sorted(id_position, key=itemgetter(0))
     print("range",len(box_class))
-    if(len(id_position) != len(box_class)): 
-#for recognition errors
-#in case, the number of wrist is different from the number of detected people ?
-#인식된 사람수 만큼 key points를 받는데 id point를 못받으면(wrist를 제외한 다른 부분을 받는 경우도 포함)
+    if(len(id_position) == 1):#for recognition errors
         for i in range(len(box_class)-len(id_position)):
-            id_position.append(0) # puts any id_position list 
-    for i in range(len(box_class)): # limited for the person who wears mask
+            if(id_position[0][3] == 'left'):
+                id_position = [id_position[0],0]
+            elif(id_position[0][3] == 'right'):
+                id_position = [0,id_position[0]]
+    for i in range(len(box_class)):# limited for the person who wears mask
+        if(len(id_position) ==0):
+            break
         if(id_position[i]):
             if(round(box_class[i][1]) == 1 and ((id_position[i][1]<BOX_1_WIDTH_END and id_position[i][1]>BOX_1_WIDTH_START and id_position[i][2] >BOX_1_HEIGHT_START and id_position[i][2] <BOX_1_HEIGHT_END) or (id_position[i][1]> BOX_2_WIDTH_START and id_position[i][1] < BOX_2_WIDTH_END and id_position[i][2] >BOX_2_HEIGHT_START and id_position[i][2] < BOX_2_HEIGHT_END))):
-                time.append(1) #touched disinfection
+                time[i]=1
             else:
-                time.append(0) #did not touch disinfection
+                time[i]=0
         else:
-            time.append(2) # 2 for not recognized(skip dicision)
+            time[i]=2 # 2 for not recognized(skip dicision)
     return people_num_tmp,id_position,time
     #end
 
-#X_compress = 640.0 / WIDTH * 1.0
-#Y_compress = 480.0 / HEIGHT * 1.0
+X_compress = 640.0 / WIDTH * 1.0
+Y_compress = 480.0 / HEIGHT * 1.0
 #time_for_disinfection = 0
 
 parse_objects = ParseObjects(topology)
@@ -280,12 +293,12 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
     #y_values = [0, 1, 4, 9, 16]	# y축 지점의 값들
     #plt.plot(x_values, y_values)	# line 그래프를 그립니다
     #plt.show()    
-    #f = open('mask_data.txt', 'w') # 파일 열기
+    f = open('mask_data.txt', 'w') # 파일 열기
     time_tmp = 0
     count_t = [0,0]
     flag=[0,0]
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out_video = cv2.VideoWriter('/home/ee201511281/termprj_sodok_test.mp4', fourcc, 30.0 , (cam.img_width, cam.img_height))
+    out_video = cv2.VideoWriter('/home/ee201511400/test3.mp4', fourcc, 30.0 , (cam.img_width, cam.img_height))
     
     #end
     full_scrn = False
@@ -299,14 +312,12 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
         img = cam.read()
         if img is None:
             break
-        #resize = cv2.resize(img,(640,480))
+        resize = cv2.resize(img,(640,480))
         img_temp = img
         boxes, confs, clss, no_mask_count, mask_count = trt_yolo.detect(img, conf_th) #added no_mask_count, mask_count variable
         #added part
-        
         _box=[]
         _clss=[]
-
         for box in boxes:
             _box.append(box[0])
         for clss in clss:
@@ -314,70 +325,58 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
         std_box_class=[] # sort box ascending(the position of array is id)
         for box,clss in zip(_box,_clss):
             std_box_class.append([box,clss])
-        std_box_class.sort(key=lambda x:x[0]) 
+        std_box_class.sort(key=lambda x:x[0])
         print(std_box_class)
-#       
         img_e = cv2.resize(img, dsize=(WIDTH, HEIGHT), interpolation=cv2.INTER_AREA)
-        people_num,id_position,time_for_disinfection  = execute(cam, img_e, img, people_num,id_position,std_box_class)
+        people_num,id_position,time_for_disinfection  = execute(img_e, img, people_num,id_position,std_box_class,cam)
+
+        
         if no_mask_count == 0:
-          if len(std_box_class) < 3: 
-# in execute function time list updates for the number of box_class
-# so when object detected more than 3, count_t[index] commend occur error
-            if(len(time_for_disinfection) != 0): #time_For_disinfection contains decision about detecting or not
-                if (len(time_for_disinfection) == 1) and (std_box_class[0][0] > (cam.img_width/2)):
-# in case, left side person appears while right person use disinfection
-#right person's count_t value move to the left side person 
-                  for index, el in enumerate(time_for_disinfection):
-                       if(el == 1): #if time_for_disinfection is 1(touched)
-                          count_t[index + 1]+=1  
-                       elif(el == 0):
-                          count_t[index + 1] = 0
-                       else: 
-                          count_t[index + 1] = count_t[index + 1]
-#because id_position sorted
-                else:
-                  for index, el in enumerate(time_for_disinfection):
-                       if(el == 1): #if time_for_disinfection is 1(touched)
-                          count_t[index]+=1 #The element of the index of person who touched disinfection plus '1' 
-                       elif(el == 0):
-                          count_t[index] = 0
-                       else: # in case time_for_disinfection is '2'(not detect keypoints), count_t does not increase
-                          count_t[index] = count_t[index]
-
+            if(len(time_for_disinfection) == 2):
+                for index, el in enumerate(time_for_disinfection):
+                    if(el == 1):
+                        count_t[index]+=1
+                    elif(el == 0):
+                        count_t[index] = 0
+                    else:
+                        count_t[index] = count_t[index]
             for index, el in enumerate(count_t):
-                if(el >= 10): # When el variable increase enough, flag[index] set.
-                     flag[index] = 1
-
+                if(el >= 20):
+                    flag[index] = 1
             print("time_count", count_t);
-            cv2.putText(img, "\n" + str(count_t[0]) + str(count_t[1]) + "\n", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
             for index, el in enumerate(flag):
-                if(len(std_box_class) != 0):
-                     if(el != 0): #this 'el' is not previous 'el' varialbe
-                         if (len(time_for_disinfection) == 1) and (std_box_class[0][0] > (cam.img_width/2)):
-                            cv2.putText(img, "You are allowed to enter", (std_box_class[0][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
-                         else:
-                            cv2.putText(img, "You are allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
-                     #if((id_position[index][1] <= 10) or (id_position[index][1] >= 1270)):
+                if(len(id_position) is not 0 and id_position[index] is not 0 and people_num==1):
+                    if(el == 1):
+                        if(index == 1):
+                            cv2.putText(img, "You are allowed to enter", (400,50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+                        else:
+                             cv2.putText(img, "You are allowed to enter", (200,50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+
+                    else:
+                        if(index == 1 ):
+                            cv2.putText(img, "You are not allowed to enter", (400,50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+                        else:
+                            cv2.putText(img, "You are not allowed to enter", (200,50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+                
+
+
+                elif(len(std_box_class)==2):
+                    if(el == 1):
+                        cv2.putText(img, "You are allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+                #if((id_position[index][1] <= 10) or (id_position[index][1] >= 1270)):
                 #    el = 0
-                  #    count_t[index] = 0
-                     #else:
-                         #cv2.putText(img, "You are not allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
-
-            font = cv2.FONT_HERSHEY_PLAIN
-            line = cv2.LINE_AA
+                #    count_t[index] = 0
+                    else:
+                        cv2.putText(img, "You are not allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
         else:
-            cv2.putText(img, "Put on Mask!", (30, 30),  cv2.FONT_HERSHEY_SIMPLEX, 1.0,(0, 255, 0), 2, cv2.LINE_AA)
-        #in case someone does not put on the mask
+            cv2.putText(img, "Put on your mask first!", (50,300), cv2.FONT_HERSHEY_SIMPLEX, 2.0,(255,0,0), 1, cv2.LINE_AA) 
 
-        if len(boxes) == 0 : # in case no one is detected
-             _box=[]
-             _clss=[]
-             std_box_class=[]
-             count_t = [0,0]
-             flag=[0,0]
-             cv2.putText(img, 'Now you can come in' + str(no_mask_count), (11, 200), font, 2.0, (32,32,32), 1, line)
-#        else:
-#                cv2.putText(img, "Put on the mask!!", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
+
+ 
+        if people_num == 0:
+            count_t = [0,0]
+            flag=[0,0]
+            cv2.putText(img, "Now you can come in", (50,300), cv2.FONT_HERSHEY_SIMPLEX, 2.0,(0,0,255), 1, cv2.LINE_AA)
 
         print("id_position",id_position)
         print("wrist_high for: ", time_for_disinfection)
@@ -388,15 +387,15 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
         img = show_fps(img, fps)
         #end
         #added part
-        '''
-        cv2.putText(img, 'no mask =' + str(no_mask_count), (11, 200), font, 5.0, (32, 32, 32), 4, line)
-        cv2.putText(img, 'no mask =' + str(no_mask_count), (10, 200), font, 5.0, (240, 240, 240), 1, line)
-        cv2.putText(img, 'mask = ' + str(mask_count), (11, 300), font, 5.0, (32, 32, 32), 4, line)
-        cv2.putText(img, 'mask = ' + str(mask_count), (10, 300), font, 5.0, (240, 240, 240), 1, line)
+        font = cv2.FONT_HERSHEY_PLAIN
+        line = cv2.LINE_AA
+        #cv2.putText(img, 'no mask =' + str(no_mask_count), (11, 200), font, 5.0, (32, 32, 32), 4, line)
+        #cv2.putText(img, 'no mask =' + str(no_mask_count), (10, 200), font, 5.0, (240, 240, 240), 1, line)
+        #cv2.putText(img, 'mask = ' + str(mask_count), (11, 300), font, 5.0, (32, 32, 32), 4, line)
+        #cv2.putText(img, 'mask = ' + str(mask_count), (10, 300), font, 5.0, (240, 240, 240), 1, line)
         
         cv2.putText(img, 'peaple = ' + str(people_num), (11, 400), font, 5.0, (32, 32, 32), 4, line)
         cv2.putText(img, 'peaple = ' + str(people_num), (10, 400), font, 5.0, (240, 240, 240), 1, line)
-        '''
         cv2.rectangle(img,(BOX_1_WIDTH_START,BOX_1_HEIGHT_START),(BOX_1_WIDTH_END,BOX_1_HEIGHT_END),(0,255,0),3)
         cv2.rectangle(img,(BOX_2_WIDTH_START,BOX_2_HEIGHT_START),(BOX_2_WIDTH_END,BOX_2_HEIGHT_END),(0,255,0),3)
         
@@ -408,14 +407,14 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
         curr_fps = 1.0 / (toc - tic)
 
         #added part
-        #time_tmp = time_tmp + (toc - tic)
-        #time_tmp_sec = int(time_tmp)
-        #time_tmp_min = int(time_tmp_sec / 60)
-        #time_tmp_hou = int(time_tmp_min / 60)
-        #time_tmp_sec = time_tmp_sec % 60
-        #time_tmp_min = time_tmp_min % 60
-        #temp = str(time_tmp_hou)+":"+str(time_tmp_min)+":"+str(time_tmp_sec)+", "+str(no_mask_count) + ", " + str(mask_count) + ", " + str(people_num)
-        #print(temp, file=f) # 파일 저장하기
+        time_tmp = time_tmp + (toc - tic)
+        time_tmp_sec = int(time_tmp)
+        time_tmp_min = int(time_tmp_sec / 60)
+        time_tmp_hou = int(time_tmp_min / 60)
+        time_tmp_sec = time_tmp_sec % 60
+        time_tmp_min = time_tmp_min % 60
+        temp = str(time_tmp_hou)+":"+str(time_tmp_min)+":"+str(time_tmp_sec)+", "+str(no_mask_count) + ", " + str(mask_count) + ", " + str(people_num)
+        print(temp, file=f) # 파일 저장하기
         #end
         # calculate an exponentially decaying average of fps number
         fps = curr_fps if fps == 0.0 else (fps*0.95 + curr_fps*0.05)
