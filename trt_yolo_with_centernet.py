@@ -320,6 +320,7 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
         img_e = cv2.resize(img, dsize=(WIDTH, HEIGHT), interpolation=cv2.INTER_AREA)
         people_num,id_position,time_for_disinfection  = execute(cam, img_e, img, people_num,id_position,std_box_class)
         if no_mask_count == 0:
+          if len(std_box_class) < 3:
             if(len(time_for_disinfection) != 0): #time_For_disinfection contains decision about detecting or not
                  for index, el in enumerate(time_for_disinfection):
                      if(el == 1): #if time_for_disinfection is 1(touched)
