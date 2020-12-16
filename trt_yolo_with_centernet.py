@@ -298,7 +298,7 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
     count_t = [0,0]
     flag=[0,0]
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out_video = cv2.VideoWriter('/home/ee201511400/test3.mp4', fourcc, 30.0 , (cam.img_width, cam.img_height))
+    out_video = cv2.VideoWriter('/home/ee201511281/sample_continue_test.mp4', fourcc, 30.0 , (cam.img_width, cam.img_height))
     
     #end
     full_scrn = False
@@ -369,14 +369,14 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
                     else:
                         cv2.putText(img, "You are not allowed to enter", (std_box_class[index][0],50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,(32,32,32), 1, cv2.LINE_AA)
         else:
-            cv2.putText(img, "Put on your mask first!", (50,300), cv2.FONT_HERSHEY_SIMPLEX, 2.0,(255,0,0), 1, cv2.LINE_AA) 
+            cv2.putText(img, "Put on your mask!", (50,300), cv2.FONT_HERSHEY_SIMPLEX, 2.0,(0,0,255), 2, cv2.LINE_AA) 
 
 
  
         if people_num == 0:
             count_t = [0,0]
             flag=[0,0]
-            cv2.putText(img, "Now you can come in", (50,300), cv2.FONT_HERSHEY_SIMPLEX, 2.0,(0,0,255), 1, cv2.LINE_AA)
+            cv2.putText(img, "Now you can come in", (50,300), cv2.FONT_HERSHEY_SIMPLEX, 2.0,(255,0,0), 2, cv2.LINE_AA)
 
         print("id_position",id_position)
         print("wrist_high for: ", time_for_disinfection)
@@ -400,7 +400,7 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis):
         cv2.rectangle(img,(BOX_2_WIDTH_START,BOX_2_HEIGHT_START),(BOX_2_WIDTH_END,BOX_2_HEIGHT_END),(0,255,0),3)
         
         people_num = 0
-        cv2.imshow(WINDOW_NAME, img)        
+        #cv2.imshow(WINDOW_NAME, img)        
         out_video.write(img)
         #end
         toc = time.time()
